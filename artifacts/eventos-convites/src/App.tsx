@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import {
@@ -11,6 +11,7 @@ import {
   getGetEventQueryKey, getListEventsQueryKey, useCancelInvite, useCreateEvent, useCreateInvite,
   useGetEvent, useHealthCheck, useListEvents, useValidateInvite,
 } from '@workspace/api-client-react';
+import QrScanner from 'qr-scanner';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -241,8 +242,58 @@ function ScanPage() {
   const [code, setCode] = useState('');
   const [result, setResult] = useState<{ valid: boolean; message: string; invite: InviteLike } | null>(null);
   const [history, setHistory] = useState<InviteLike[]>(demoInvites.slice(0, 3));
-  const submit = (event: FormEvent) => { event.preventDefault(); const value = code.trim().toUpperCase(); if (!value) return; validate.mutate({ code: value }, { onSuccess: (data) => { setResult(data as typeof result); if (data.valid && data.invite) setHistory((items) => [data.invite as InviteLike, ...items.filter((item) => item.code !== data.invite.code)].slice(0, 5)); }, onError: () => { const invite = demoInvites.find((item) => item.code === value) ?? { ...demoInvites[1], code: value, guestName: 'Convidado de demonstração' }; setResult(value.startsWith('X') ? { valid: false, message: 'Este código não foi encontrado ou já não é válido.', invite } : { valid: true, message: 'Entrada validada. Pode receber este convidado.', invite }); } }); };
-  return <><PageHeading eyebrow="Receção" title="Entrada sem esperas." description="Valide um convite e dê as boas-vindas. O código é a única coisa de que precisa." /><div className="grid gap-6 xl:grid-cols-[1.1fr_.9fr]"><section className="rounded-[26px] bg-[#24453f] p-6 text-[#f8f1e7] md:p-10"><div className="flex items-center justify-between"><div><p className="mono text-[10px] uppercase tracking-[.18em] text-[#e7bf7a]">Validador rápido</p><h2 className="display mt-3 text-3xl font-bold">Quem chegou?</h2></div><span className="grid h-12 w-12 place-items-center rounded-2xl border border-white/20 text-[#e7bf7a]"><QrCode size={25} /></span></div><form onSubmit={submit} className="mt-10"><label className="mb-2 block text-xs font-bold text-white/65">Código do convite</label><div className="flex gap-2"><input autoFocus value={code} onChange={(event) => setCode(event.target.value)} placeholder="ANA-MIG-001" className="h-14 min-w-0 flex-1 rounded-xl border border-white/15 bg-white/10 px-4 font-mono text-sm uppercase text-white outline-none placeholder:text-white/30 focus:border-[#e7bf7a]" data-testid="input-scan-code" /><Button type="submit" disabled={validate.isPending} className="h-14 shrink-0 px-5" data-testid="button-validate-code">{validate.isPending ? 'A validar…' : 'Validar'}<ArrowUpRight size={16} /></Button></div></form>{result && <div className={`mt-6 rounded-2xl border p-4 ${result.valid ? 'border-[#8ec4a5]/40 bg-[#8ec4a5]/15' : 'border-[#e9a295]/40 bg-[#e9a295]/15'}`}><div className="flex items-start gap-3">{result.valid ? <CheckCircle2 className="text-[#a8dbba]" /> : <XCircle className="text-[#f0b1a4]" />}<div><p className="font-bold">{result.valid ? 'Entrada autorizada' : 'Entrada não autorizada'}</p><p className="mt-1 text-xs text-white/65">{result.message}</p>{result.invite && <p className="mt-3 text-sm font-bold">{result.invite.guestName} <span className="ml-2 font-mono text-[10px] text-white/50">{result.invite.code}</span></p>}</div></div></div>}<p className="mt-8 flex items-center gap-2 text-xs text-white/45"><ShieldCheck size={14} /> Cada código só pode ser validado uma vez.</p></section><section className="rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-[var(--shadow-card)] md:p-8"><div className="flex items-center justify-between"><div><p className="mono text-[10px] uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">Ao vivo</p><h2 className="display mt-2 text-2xl font-bold">Entradas recentes</h2></div><span className="flex items-center gap-1.5 text-[10px] font-bold text-[#39745f]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#65a986]" /> Ativo</span></div><div className="mt-6 space-y-2">{history.map((invite, index) => <div key={`${invite.code}-${index}`} className="flex items-center gap-3 rounded-xl p-3 transition hover:bg-[hsl(var(--muted))]" data-testid={`row-scan-${invite.code}`}><span className="grid h-9 w-9 place-items-center rounded-full bg-[hsl(var(--secondary))] text-[10px] font-black text-[hsl(var(--secondary-foreground))]">{initials(invite.guestName)}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{invite.guestName}</p><p className="mono mt-0.5 text-[10px] text-[hsl(var(--muted-foreground))]">{invite.code}</p></div><span className="text-[10px] font-bold text-[#39745f]">{index === 0 ? 'agora' : `${index * 4} min`}</span><CheckCircle2 size={16} className="text-[#65a986]" /></div>)}</div><div className="mt-5 border-t border-[hsl(var(--border))] pt-5 text-center"><Link href="/eventos/ev-casamento" className="text-xs font-bold text-[hsl(var(--primary))]" data-testid="link-scan-event">Ver lista completa <ArrowUpRight className="ml-1 inline" size={13} /></Link></div></section></div></>;
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scannerRef = useRef<QrScanner | null>(null);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+
+  const submit = (event?: FormEvent, scannedCode?: string) => {
+    event?.preventDefault();
+    const value = (scannedCode ?? code).trim().toUpperCase();
+    if (!value) return;
+    setCode(value);
+    validate.mutate({ code: value }, {
+      onSuccess: (data) => {
+        setResult(data as typeof result);
+        if (data.valid && data.invite) setHistory((items) => [data.invite as InviteLike, ...items.filter((item) => item.code !== data.invite.code)].slice(0, 5));
+      },
+      onError: () => {
+        const invite = demoInvites.find((item) => item.code === value) ?? { ...demoInvites[1], code: value, guestName: 'Convidado de demonstração' };
+        setResult(value.startsWith('X') ? { valid: false, message: 'Este código não foi encontrado ou já não é válido.', invite } : { valid: true, message: 'Entrada validada. Pode receber este convidado.', invite });
+      },
+    });
+  };
+
+  const stopCamera = () => {
+    scannerRef.current?.stop();
+    scannerRef.current?.destroy();
+    scannerRef.current = null;
+    setCameraOn(false);
+  };
+
+  const startCamera = async () => {
+    if (!videoRef.current) return;
+    setCameraError('');
+    try {
+      const scanner = new QrScanner(videoRef.current, ({ data }) => {
+        stopCamera();
+        submit(undefined, data);
+      }, { highlightScanRegion: true, highlightCodeOutline: true, preferredCamera: 'environment' });
+      scannerRef.current = scanner;
+      await scanner.start();
+      setCameraOn(true);
+    } catch {
+      setCameraError('Não foi possível aceder à câmara. Confirme a permissão do navegador e tente novamente.');
+      stopCamera();
+    }
+  };
+
+  useEffect(() => () => {
+    scannerRef.current?.stop();
+    scannerRef.current?.destroy();
+  }, []);
+
+  return <><PageHeading eyebrow="Receção" title="Entrada sem esperas." description="Aponte a câmara para o QR Code do convite. A entrada é validada em segundos." /><div className="grid gap-6 xl:grid-cols-[1.1fr_.9fr]"><section className="overflow-hidden rounded-[26px] bg-[#24453f] p-6 text-[#f8f1e7] md:p-10"><div className="flex items-center justify-between"><div><p className="mono text-[10px] uppercase tracking-[.18em] text-[#e7bf7a]">Validador por câmara</p><h2 className="display mt-3 text-3xl font-bold">Quem chegou?</h2></div><span className="grid h-12 w-12 place-items-center rounded-2xl border border-white/20 text-[#e7bf7a]"><QrCode size={25} /></span></div><div className="relative mt-8 overflow-hidden rounded-[22px] border border-white/15 bg-black/20"><video ref={videoRef} className={`aspect-video w-full object-cover ${cameraOn ? 'opacity-100' : 'opacity-40'}`} muted playsInline /><div className="pointer-events-none absolute inset-0 grid place-items-center"><div className="h-44 w-44 rounded-[28px] border-2 border-[#e7bf7a] shadow-[0_0_0_999px_rgba(0,0,0,.24)]" /></div>{!cameraOn && <div className="absolute inset-0 grid place-items-center"><button type="button" onClick={startCamera} className="inline-flex items-center gap-2 rounded-xl bg-[#e7bf7a] px-4 py-3 text-sm font-bold text-[#24453f] shadow-lg transition hover:-translate-y-0.5"><QrCode size={17} /> Abrir câmara</button></div>}{cameraOn && <button type="button" onClick={stopCamera} className="absolute right-3 top-3 rounded-lg bg-black/45 px-3 py-2 text-xs font-bold text-white backdrop-blur">Parar</button>}</div>{cameraError && <p className="mt-3 rounded-xl border border-[#e9a295]/30 bg-[#e9a295]/10 px-3 py-2 text-xs text-[#ffd0c5]">{cameraError}</p>}<div className="my-7 flex items-center gap-3 text-[10px] uppercase tracking-[.18em] text-white/40"><span className="h-px flex-1 bg-white/10" /> ou use o código <span className="h-px flex-1 bg-white/10" /></div><form onSubmit={submit}><label className="mb-2 block text-xs font-bold text-white/65">Código do convite</label><div className="flex gap-2"><input autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value)} placeholder="ANA-MIG-001" className="h-14 min-w-0 flex-1 rounded-xl border border-white/15 bg-white/10 px-4 font-mono text-sm uppercase text-white outline-none placeholder:text-white/30 focus:border-[#e7bf7a]" data-testid="input-scan-code" /><Button type="submit" disabled={validate.isPending} className="h-14 shrink-0 px-5" data-testid="button-validate-code">{validate.isPending ? 'A validar…' : 'Validar'}<ArrowUpRight size={16} /></Button></div></form>{result && <div className={`mt-6 rounded-2xl border p-4 ${result.valid ? 'border-[#8ec4a5]/40 bg-[#8ec4a5]/15' : 'border-[#e9a295]/40 bg-[#e9a295]/15'}`}><div className="flex items-start gap-3">{result.valid ? <CheckCircle2 className="text-[#a8dbba]" /> : <XCircle className="text-[#f0b1a4]" />}<div><p className="font-bold">{result.valid ? 'Entrada autorizada' : 'Entrada não autorizada'}</p><p className="mt-1 text-xs text-white/65">{result.message}</p>{result.invite && <p className="mt-3 text-sm font-bold">{result.invite.guestName} <span className="ml-2 font-mono text-[10px] text-white/50">{result.invite.code}</span></p>}</div></div></div>}<p className="mt-8 flex items-center gap-2 text-xs text-white/45"><ShieldCheck size={14} /> Cada código só pode ser validado uma vez.</p></section><section className="rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-[var(--shadow-card)] md:p-8"><div className="flex items-center justify-between"><div><p className="mono text-[10px] uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">Ao vivo</p><h2 className="display mt-2 text-2xl font-bold">Entradas recentes</h2></div><span className="flex items-center gap-1.5 text-[10px] font-bold text-[#39745f]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#65a986]" /> Ativo</span></div><div className="mt-6 space-y-2">{history.map((invite, index) => <div key={`${invite.code}-${index}`} className="flex items-center gap-3 rounded-xl p-3 transition hover:bg-[hsl(var(--muted))]" data-testid={`row-scan-${invite.code}`}><span className="grid h-9 w-9 place-items-center rounded-full bg-[hsl(var(--secondary))] text-[10px] font-black text-[hsl(var(--secondary-foreground))]">{initials(invite.guestName)}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{invite.guestName}</p><p className="mono mt-0.5 text-[10px] text-[hsl(var(--muted-foreground))]">{invite.code}</p></div><span className="text-[10px] font-bold text-[#39745f]">{index === 0 ? 'agora' : `${index * 4} min`}</span><CheckCircle2 size={16} className="text-[#65a986]" /></div>)}</div><div className="mt-5 border-t border-[hsl(var(--border))] pt-5 text-center"><Link href="/eventos/ev-casamento" className="text-xs font-bold text-[hsl(var(--primary))]" data-testid="link-scan-event">Ver lista completa <ArrowUpRight className="ml-1 inline" size={13} /></Link></div></section></div></>;
 }
 
 function PublicInvitePage() {
