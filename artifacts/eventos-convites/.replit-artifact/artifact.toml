@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Eventos e Convites"
+description = "A polished event management workspace for organizers to create events, manage guest invitations, validate QR codes, and share public invitations."
+version = "1.0.0"
+id = "artifacts/eventos-convites"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19076
+
+[services.development]
+run = "pnpm --filter @workspace/eventos-convites run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/eventos-convites", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/eventos-convites/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19076"
+BASE_PATH = "/"

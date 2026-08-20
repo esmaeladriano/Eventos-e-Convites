@@ -1,0 +1,1 @@
+- [OpenAPI codegen compatibility](api-codegen-integer.md) — use numeric schemas for counts/capacities until the workspace generator supports integer Zod output.
