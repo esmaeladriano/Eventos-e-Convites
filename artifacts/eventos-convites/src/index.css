@@ -33,31 +33,31 @@
 }
 
 :root {
-  --background: 37 35% 96%;
-  --foreground: 210 26% 19%;
-  --card: 40 33% 99%;
-  --card-foreground: 210 26% 19%;
-  --card-border: 36 22% 88%;
-  --sidebar: 41 30% 93%;
-  --sidebar-foreground: 210 26% 19%;
-  --sidebar-border: 36 22% 86%;
-  --sidebar-accent: 166 30% 86%;
-  --sidebar-primary: 170 36% 24%;
-  --border: 36 22% 87%;
-  --input: 36 22% 80%;
-  --ring: 13 68% 52%;
-  --primary: 13 68% 52%;
-  --primary-foreground: 40 33% 99%;
-  --secondary: 166 30% 86%;
-  --secondary-foreground: 170 36% 24%;
-  --muted: 35 25% 91%;
-  --muted-foreground: 210 12% 46%;
-  --accent: 43 91% 68%;
-  --accent-foreground: 26 34% 22%;
+  --background: 214 40% 97%;
+  --foreground: 215 46% 16%;
+  --card: 0 0% 100%;
+  --card-foreground: 215 46% 16%;
+  --card-border: 214 32% 90%;
+  --sidebar: 222 47% 11%;
+  --sidebar-foreground: 210 40% 96%;
+  --sidebar-border: 215 30% 22%;
+  --sidebar-accent: 215 35% 20%;
+  --sidebar-primary: 214 88% 62%;
+  --border: 214 32% 88%;
+  --input: 214 25% 78%;
+  --ring: 214 88% 52%;
+  --primary: 214 88% 52%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 214 80% 94%;
+  --secondary-foreground: 215 55% 24%;
+  --muted: 214 28% 93%;
+  --muted-foreground: 215 18% 46%;
+  --accent: 190 84% 42%;
+  --accent-foreground: 0 0% 100%;
   --destructive: 355 62% 49%;
   --destructive-foreground: 40 33% 99%;
   --app-font-sans: 'Manrope', ui-sans-serif, sans-serif;
-  --app-font-serif: 'Playfair Display', Georgia, serif;
+  --app-font-serif: 'Manrope', ui-sans-serif, sans-serif;
   --app-font-mono: 'DM Mono', ui-monospace, monospace;
   --radius: 1rem;
   --shadow-card: 0 10px 30px -22px hsl(210 25% 20% / .4);
@@ -96,11 +96,6 @@ body { margin: 0; font-family: var(--app-font-sans); background: hsl(var(--backg
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 
-.app-noise::before {
-  content: '';
-  position: fixed; inset: 0; pointer-events: none; z-index: 40; opacity: .032;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
-}
 .display { font-family: var(--app-font-serif); }
 .mono { font-family: var(--app-font-mono); }
 .fade-up { animation: fade-up .55s cubic-bezier(.22,.8,.3,1) both; }
@@ -109,6 +104,17 @@ button { cursor: pointer; }
 @keyframes fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 .lift { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
 .lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-float); }
+.app-shell { min-height: 100vh; background: hsl(var(--background)); }
+.eyebrow { font-family: var(--app-font-mono); font-size: .7rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+.icon-button { display: inline-flex; height: 2.5rem; width: 2.5rem; align-items: center; justify-content: center; border-radius: .75rem; transition: background-color .2s, color .2s; }
+.icon-button:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+.field-label { display: grid; gap: .5rem; color: hsl(var(--foreground)); font-size: .875rem; font-weight: 700; }
+.field-input { width: 100%; border: 1px solid hsl(var(--border)); border-radius: .75rem; background: white; padding: .75rem .875rem; color: hsl(var(--foreground)); outline: none; transition: border-color .2s, box-shadow .2s; }
+.field-input:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--ring) / .16); }
+.primary-button { border-radius: .75rem; background: hsl(var(--primary)); padding: .75rem 1rem; color: white; font-size: .875rem; font-weight: 700; transition: background-color .2s, transform .2s; }
+.primary-button:hover { background: hsl(214 88% 43%); transform: translateY(-1px); }
+.secondary-button { border-radius: .75rem; padding: .75rem 1rem; color: hsl(var(--muted-foreground)); font-size: .875rem; font-weight: 700; }
+.secondary-button:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
 .skeleton { background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--card)) 50%, hsl(var(--muted)) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 @media (max-width: 767px) { .desktop-only { display: none !important; } }
