@@ -1,9 +1,17 @@
 import { createRoot } from 'react-dom/client';
+import { registerSW } from 'virtual:pwa-register';
 
 import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
 
 import './index.css';
+
+registerSW({
+  immediate: true,
+  onOfflineReady() {
+    console.info('PWA pronta para uso offline.');
+  },
+});
 
 createRoot(document.getElementById('root')!, {
   // Keeps caught errors off reportError(), which would raise the dev overlay.

@@ -87,6 +87,11 @@ function Home() {
   const [modalOpen, setModalOpen] = useState(false);
   const [installInfoOpen, setInstallInfoOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [dataVersion, setDataVersion] = useState(0);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  const storedEvents = useMemo(() => readStorage<EventRecord[]>('lumina-events', defaultEvents), [dataVersion]);
+  const storedGuests = useMemo(() => readStorage<GuestRecord[]>('lumina-guests', []), [dataVersion]);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event: Event) => {
@@ -94,8 +99,25 @@ function Home() {
       setInstallPrompt(event as BeforeInstallPromptEvent);
     };
 
+    const updateStandaloneState = () => {
+      const isStandaloneMode =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
+      setIsStandalone(isStandaloneMode);
+    };
+
+    const handleAppInstalled = () => setIsStandalone(true);
+
+    updateStandaloneState();
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+    window.addEventListener('storage', () => setDataVersion((value) => value + 1));
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener('storage', () => setDataVersion((value) => value + 1));
+    };
   }, []);
 
   const installApp = async () => {
@@ -106,7 +128,11 @@ function Home() {
     await installPrompt.prompt();
     await installPrompt.userChoice;
     setInstallPrompt(null);
+    setIsStandalone(true);
   };
+
+  const confirmedGuests = storedGuests.filter((guest) => guest.used).length;
+  const invitationRate = storedGuests.length > 0 ? Math.round((confirmedGuests / storedGuests.length) * 100) : 0;
 
   return (
     <main className="app-shell">
@@ -151,10 +177,12 @@ function Home() {
               <p className="mt-3 max-w-xl text-slate-500">Tudo pronto para os seus próximos momentos especiais?</p>
             </div>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={installApp} className="hidden items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-[#1769e0] shadow-sm transition hover:bg-blue-50 sm:flex">
+              {!isStandalone && (
+                <button type="button" onClick={installApp} className="hidden items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-[#1769e0] shadow-sm transition hover:bg-blue-50 sm:flex">
                   <Ticket size={17} />
                   Baixar app
-              </button>
+                </button>
+              )}
               <button type="button" onClick={() => setModalOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#1769e0] text-white shadow-lg shadow-blue-600/20 transition hover:bg-[#1258c0]" aria-label="Criar novo evento" title="Criar novo evento">
                 <CirclePlus size={21} />
               </button>
@@ -163,9 +191,9 @@ function Home() {
 
           <div className="mt-12 grid gap-4 sm:grid-cols-3">
             {[
-              ['Próximos eventos', '03', CalendarDays],
-              ['Convites enviados', '106', Send],
-              ['Confirmações', '82%', QrCode],
+              ['Próximos eventos', String(storedEvents.length), CalendarDays],
+              ['Convites enviados', String(storedGuests.length), Send],
+              ['Confirmações', `${invitationRate}%`, QrCode],
             ].map(([label, value, Icon]) => (
               <div key={label as string} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70">
                 <div className="flex items-center justify-between text-slate-400"><span className="text-sm">{label as string}</span><Icon size={18} /></div>
@@ -179,17 +207,17 @@ function Home() {
             <a href="/events" className="flex items-center gap-1 text-sm font-bold text-[#1769e0]">Ver todos <ChevronRight size={16} /></a>
           </div>
           <div className="mt-5 grid gap-4 lg:grid-cols-3">
-            {events.map((event) => (
-              <article id="events" key={event.name} className="lift overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
+            {storedEvents.map((event) => (
+              <article id="events" key={event.id} className="lift overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
                 <div className={`${event.color} flex h-28 items-end justify-between p-5 text-[#fffdf9]`}>
                   <span className="mono text-sm font-medium tracking-wider">{event.date}</span>
                   <button type="button" aria-label={`Mais opções para ${event.name}`} title="Mais opções"><MoreHorizontal size={20} /></button>
                 </div>
                 <div className="p-5">
                   <h3 className="text-lg font-bold text-[#0b2346]">{event.name}</h3>
-                  <p className="mt-2 text-sm text-slate-500">{event.details}</p>
+                  <p className="mt-2 text-sm text-slate-500">{event.location}</p>
                   <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-sm">
-                    <span className="text-slate-500">{event.guests}</span>
+                    <span className="text-slate-500">Até {event.capacity} convidados</span>
                     <button type="button" className="font-bold text-[#1769e0]">Gerenciar</button>
                   </div>
                 </div>
@@ -211,7 +239,7 @@ function Home() {
           </a>
         ))}
       </nav>
-      {modalOpen && <CreateEventModal onClose={() => setModalOpen(false)} />}
+      {modalOpen && <CreateEventModal onCreated={() => setDataVersion((value) => value + 1)} onClose={() => setModalOpen(false)} />}
       {installInfoOpen && <InstallInfoModal onClose={() => setInstallInfoOpen(false)} />}
     </main>
   );
